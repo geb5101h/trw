@@ -6,8 +6,8 @@ if(Sys.getenv("USER")=="ebjan"){
 }
 
 #m=3
-m1=1
-m2=1
+m1=2
+m2=2
 source("startup.r")
 
 ####################
