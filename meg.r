@@ -20,7 +20,7 @@ dat<-scale(dat,center=TRUE,scale=TRUE)
 #dat[which(abs(dat)>6)]<- sign(dat[which(abs(dat)>6)])*6
 data2<-dat
 data2<- apply(data2,2,function(x)(x-min(x)+.001)/(max(x)-min(x)+.002))
-train<-data2[1:3000,]
+train<-data2[2000:3000,]
 test<-data2[3001:3500,]
 
 d<-dim(train)[2]

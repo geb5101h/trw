@@ -594,7 +594,7 @@ Nll_obj ista(Coef& coef,
      Rcpp::Rcout << "iteration #: " << iter << " pen nll: " << nll.nll + lambda*nrm << std::endl;
 
     //Rcpp::Rcout << "crit: "<< std::abs(nll_old.nll - nll.nll + nrm_old - nrm) << std::endl;
-    if(std::abs(nll_old.nll - nll.nll + lambda*(nrm_old - nrm) ) < (1+e)*1e-6 | iter>1000){
+    if(std::abs(nll_old.nll - nll.nll + lambda*(nrm_old - nrm) ) < (1+e)*1e-4 | iter>1000){
       break;
     }
     coef_old = coef;
