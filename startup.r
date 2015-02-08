@@ -60,3 +60,18 @@ for(i in 1:m2){
   }
 }
 
+mixlik<-function(test,mclustout){
+	d=dim(test)[2]
+	out2=lapply(1:dim(test)[1],function(x){
+		out=0
+		for(i in 1:length(mclustout$pro)){
+			out= out + mclustout$pro[i]*(det(mclustout$variance$sigma[,,i])^(-1/2))*
+				exp(-.5*crossprod(test[x,]-mclustout$mean[,i],solve(mclustout$variance$sigma[,,i]))%*%(test[x,]-mclustout$mean[,i]))
+		}
+	return( log(out) - (d/2)*log(2*pi) )		
+	})
+	return(-mean(unlist(out2)))
+}
+
+
+

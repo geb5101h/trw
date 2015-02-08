@@ -4,24 +4,32 @@ if(Sys.getenv("USER")=="ebjan"){
 }else{
   setwd("~/Dropbox/trw")
 }
-
+library(fastICA)
 #m=3
-m1=3
-m2=3
+m1=12
+m2=12
 source("startup.r")
 source("trw_fit.r")
 ####################
 
 ####################
-dat<-matrix( scan(file="MEG_art",what=double()) , ncol=122, byrow=F)
+len=200
+ntest=200
+
+limit=6000
+out_len=5
+dat<-matrix( scan(file="MEG_art",what=double()) , ncol=122, byrow=F)[1:(len+ntest),]
 #save(file="meg.rdata",list=c("dat"))
 #source("meg.rdata")
 dat<-scale(dat,center=TRUE,scale=TRUE)
+dat[abs(dat)>4]=4
 #dat[which(abs(dat)>6)]<- sign(dat[which(abs(dat)>6)])*6
-data2<-dat
-data2<- apply(data2,2,function(x)(x-min(x)+.001)/(max(x)-min(x)+.002))
-train<-data2[2000:3000,]
-test<-data2[3001:3500,]
+#data2<-fastICA(data2[1:1000,],n.comp=122)$S
+dat<- apply(dat,2,function(x)(x-min(x)+.01)/(max(x)-min(x)+.02))
+
+sam<-sample(1:(len+ntest))
+train<-dat[sam[1:len],]
+test<-dat[sam[(len+1):(len+ntest)],]
 
 d<-dim(train)[2]
 ####################
@@ -35,7 +43,7 @@ rho_start<- max( abs(cc-diag(diag(cc))) )
 
 
 
-run_seq <- exp( seq(from=log(rho_start*.2), to =log(rho_start*1.1),length.out=50 ) )
+run_seq <- exp( seq(from=log(rho_start*.02), to =log(rho_start*1.1),length.out=50 ) )
 #run_seq<- seq(from=1e-5,to=rho_start,length.out=25)
 test_error<- vector(length=length(run_seq))
 ind=0
@@ -121,8 +129,7 @@ node_coef<- matrix(0,d,m1)
 
 lambda=.1
 alpha_start=1
-limit=30
-out_len=10
+
 path<-trw_path(edge_coef,node_coef,node_mean,edge_mean,
                edgelist,weights=NULL,alpha_start=1,
                g,cores=cores,limit=limit,relax=F,edge.opt=T,out_len=out_len)
@@ -156,7 +163,7 @@ save.image("meg.rdata")
 pdf("path_meg.pdf")
 nf<- layout(matrix(c(1,1,1,2,3,4),nrow=2,ncol=3,byrow=T), respect = T,heights=c(8,6),widths=rep(4,3))
 
-plot(seqlm,risk_path,type="l",ylim=range(risk_path,risk_path_relax,test_error,test_error_relax))
+plot(seqlm,risk_path,type="l",ylim=range(risk_path,risk_path_relax,test_error))
 points(seqlm,risk_path_relax,type="l",col="blue")
 #points(seqlm,risk_path_tree,type="l",col="orange")
 
@@ -168,12 +175,15 @@ legend("topright",c("trw","trw relax","glasso relax", "glasso"),
 
 ########################################
 #g1<- graph.adjacency(h$theta,mode="undirected")
-g1<- graph.empty(122)
+g1<- graph.empty(122,directed=F)
 g2<- graph.edgelist(path_relax[[which.min(risk_path_relax)]]$edgelist,directed=F)
-g3<-graph.adjacency(1*(glasso_out[,,33]!=0)-diag(d),
+#g3<-graph.adjacency(1*(glasso_out[,,57]!=0)-diag(d),
+#                mode="undirected")
+#g2<-graph.edgelist(path_relax[[6]]$edgelist,directed=F)
+g3<-graph.adjacency(1*(glasso_out[,,36]!=0)-diag(d),
                 mode="undirected")
-l<-layout.auto(g1)
-
+l<-layout.auto(g2)
+#l<-layout.auto(g2)
 
 g12<- graph.union(g1,g2)
 g13<- graph.union(g1,g3)
@@ -183,11 +193,13 @@ el2 <- apply(get.edgelist(g2), 1, paste, collapse="-")
 el3 <- apply(get.edgelist(g3), 1, paste, collapse="-")
 el12 <- apply(get.edgelist(g12), 1, paste, collapse="-")
 el13 <- apply(get.edgelist(g13), 1, paste, collapse="-")
-E(g1)$color= "black"
-E(g12)$color <- ifelse( !(el12 %in% el1)  , "red",
-		ifelse(!(el12 %in% el2), "gray", "black") )
-E(g13)$color <- ifelse( !(el13 %in% el1)  , "red",
-		ifelse(!(el13 %in% el3), "gray", "black") )
+E(1)$color= "black"
+#E(g12)$color <- ifelse( !(el12 %in% el1)  , "red",
+#		ifelse(!(el12 %in% el2), "gray", "black") )
+#E(g13)$color <- ifelse( !(el13 %in% el1)  , "red",
+#		ifelse(!(el13 %in% el3), "gray", "black") )
+E(g2)$color="black"
+E(g3)$color="black"
 edge.lty12 <- ifelse( (el12 %in% el2), "solid","solid")
 edge.lty13 <- ifelse( (el13 %in% el3), "solid","solid")
 
@@ -257,4 +269,4 @@ dev.off()
 # 
 # pdf("mi_weightng_meg.pdf")
 # plot(path[[which.min(risk_path)]]$mutual_info,path[[which.min(risk_path)]]$weight,pch=16)
-# dev.off()
+# dev.off(
