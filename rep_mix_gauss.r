@@ -134,7 +134,7 @@ for(d in dlist){
 # 		roc[5,diter,r,2]<- 1-sum( (graphs[][ind]!=0) & (h$theta[ind]==0) ) /(d*(d-1)/2-spar)
 		mcl<-densityMclust(train)
 		err[6,diter,r]<-mixlik(test,mcl$parameters)
-		#save(err,roc,file="~/trw/Experiments/rep_mix_gauss.rdata")
+		save(err,roc,file="~/trw/Experiments/rep_mix_gauss.rdata")
 
 	}
 }

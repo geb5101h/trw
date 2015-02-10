@@ -5,24 +5,29 @@ if(Sys.getenv("USER")=="ebjan"){
   setwd("~/Dropbox/trw")
 }
 library(fastICA)
+library(mclust)
 #m=3
 m1=12
 m2=12
 source("startup.r")
 source("trw_fit.r")
+setwd("~")
+source("~/Forest Density/treeLoader.R");
+loadTree()
 ####################
-
+set.seed(3498)
 ####################
-len=200
-ntest=200
+len=100
+ntest=300
 
-limit=6000
+limit=400
 out_len=5
-dat<-matrix( scan(file="MEG_art",what=double()) , ncol=122, byrow=F)[1:(len+ntest),]
+
+dat<-matrix( scan(file="~/trw/MEG_art",what=double()) , ncol=122, byrow=F)[1:(len+ntest),]
 #save(file="meg.rdata",list=c("dat"))
 #source("meg.rdata")
 dat<-scale(dat,center=TRUE,scale=TRUE)
-dat[abs(dat)>4]=4
+dat[abs(dat)>6.5]=6.5
 #dat[which(abs(dat)>6)]<- sign(dat[which(abs(dat)>6)])*6
 #data2<-fastICA(data2[1:1000,],n.comp=122)$S
 dat<- apply(dat,2,function(x)(x-min(x)+.01)/(max(x)-min(x)+.02))
@@ -43,7 +48,7 @@ rho_start<- max( abs(cc-diag(diag(cc))) )
 
 
 
-run_seq <- exp( seq(from=log(rho_start*.02), to =log(rho_start*1.1),length.out=50 ) )
+run_seq <- exp( seq(from=log(rho_start*.2), to =log(rho_start*1.1),length.out=100 ) )
 #run_seq<- seq(from=1e-5,to=rho_start,length.out=25)
 test_error<- vector(length=length(run_seq))
 ind=0
@@ -153,24 +158,34 @@ risk_path_relax<-simplify2array(risk_path_relax)
 
 seqlm<-  seqlp<-round( seq(from=1,to=limit,length.out=out_len) )
 
-setwd("./Experiments")
+mcl<-densityMclust(train)
+mixlik(test,mcl$parameters)
+graphs = forestDensityEst(train, 2*d)
+likehd_out = computeLogLikehd(train, test, list(graphs));
+
+likehd_out$likehd_ls
+#mixlik(test,mcl$parameters)
+
+
+setwd("~/trw/Experiments")
 
 
 save.image("meg.rdata")
 
 
 
+
 pdf("path_meg.pdf")
-nf<- layout(matrix(c(1,1,1,2,3,4),nrow=2,ncol=3,byrow=T), respect = T,heights=c(8,6),widths=rep(4,3))
-
-plot(seqlm,risk_path,type="l",ylim=range(risk_path,risk_path_relax,test_error))
-points(seqlm,risk_path_relax,type="l",col="blue")
-#points(seqlm,risk_path_tree,type="l",col="orange")
-
-points(num_nonzero,test_error_relax,col="green",type="l")
-points(num_nonzero,test_error,col="purple",type="l")
-legend("topright",c("trw","trw relax","glasso relax", "glasso"),
-       pch=16,col=c("black","blue","green","purple"))
+# nf<- layout(matrix(c(1,1,1,2,3,4),nrow=2,ncol=3,byrow=T), respect = T,heights=c(8,6),widths=rep(4,3))
+# 
+# plot(seqlm,risk_path,type="l",ylim=range(risk_path,risk_path_relax,test_error))
+# points(seqlm,risk_path_relax,type="l",col="blue")
+# #points(seqlm,risk_path_tree,type="l",col="orange")
+# 
+# points(num_nonzero,test_error_relax,col="green",type="l")
+# points(num_nonzero,test_error,col="purple",type="l")
+# legend("topright",c("trw","trw relax","glasso relax", "glasso"),
+#        pch=16,col=c("black","blue","green","purple"))
 #dev.off()
 
 ########################################
@@ -180,11 +195,11 @@ g2<- graph.edgelist(path_relax[[which.min(risk_path_relax)]]$edgelist,directed=F
 #g3<-graph.adjacency(1*(glasso_out[,,57]!=0)-diag(d),
 #                mode="undirected")
 #g2<-graph.edgelist(path_relax[[6]]$edgelist,directed=F)
-g3<-graph.adjacency(1*(glasso_out[,,36]!=0)-diag(d),
+g3ind=which.min(abs(apply(glasso_out,3,function(x) sum(x[row(x)>=col(x)+1]!=0))-199))
+g3<-graph.adjacency(1*(glasso_out[,,g3ind]!=0)-diag(d),
                 mode="undirected")
-l<-layout.auto(g2)
+l<-layout.auto(graph.union(g3,g2))
 #l<-layout.auto(g2)
-
 g12<- graph.union(g1,g2)
 g13<- graph.union(g1,g3)
 
@@ -193,20 +208,46 @@ el2 <- apply(get.edgelist(g2), 1, paste, collapse="-")
 el3 <- apply(get.edgelist(g3), 1, paste, collapse="-")
 el12 <- apply(get.edgelist(g12), 1, paste, collapse="-")
 el13 <- apply(get.edgelist(g13), 1, paste, collapse="-")
-E(1)$color= "black"
+E(g1)$color= "black"
 #E(g12)$color <- ifelse( !(el12 %in% el1)  , "red",
 #		ifelse(!(el12 %in% el2), "gray", "black") )
-#E(g13)$color <- ifelse( !(el13 %in% el1)  , "red",
-#		ifelse(!(el13 %in% el3), "gray", "black") )
+E(g3)$color <- ifelse( (el3 %in% el2)  , "black","red")
+	#	ifelse(!(el13 %in% el3), "red", "black") )
 E(g2)$color="black"
 E(g3)$color="black"
 edge.lty12 <- ifelse( (el12 %in% el2), "solid","solid")
 edge.lty13 <- ifelse( (el13 %in% el3), "solid","solid")
 
+lec <- leading.eigenvector.community(g2)
+lev <- lec$membership
+rb=rainbow(5)
+k=1
+cut=sort(unlist(lapply(unique(lev),function(x)sum(x==lev))),decreasing=T)[4]
 
+for(i in unique(lev)){
+	if(sum(lev==i)<cut) V(g2)$color[lev==i] = "black"
+	else{
+		V(g2)$color[lev==i]=rb[k]
+		k=k+1
+	}
+}
+
+lec <- leading.eigenvector.community(g3)
+lev <- lec$membership
+k=1
+
+cut=sort(unlist(lapply(unique(lev),function(x)sum(x==lev))),decreasing=T)[4]
+for(i in unique(lev)){
+	if(sum(lev==i)<cut) V(g3)$color[lev==i] = "black"
+	else{
+		V(g3)$color[lev==i]=rb[c(1,3,2,4)][k]
+		k=k+1
+	}
+}
 #pdf("graph_gaussian.pdf")
 #par(mfcol=c(1,3))
-par(mar=rep(.5,4))  
+
+par(mar=rep(.5,4),mfcol=c(2,1) ) 
 # plot.igraph(g1,vertex.size=5,
 #      layout=l,
 #      vertex.label='',
@@ -214,20 +255,24 @@ par(mar=rep(.5,4))
 #      edge.lty=1,
 #      vertex.color="white");
 #      title("True",line=-2) 
-plot.igraph(g2,vertex.size=5,
+plot.igraph(g2,
      layout=l,
      vertex.label='',
      edge.lty=edge.lty12,
-     vertex.color="white");
-    title("TRW",line=-2) 
+     #vertex.color="black",
+     vertex.size=4,
+     edge.width=.02);
+ #   title("TRW") 
  
-plot.igraph(g3,vertex.size=5,
+plot.igraph(g3,
      layout=l,
      vertex.label='',
      edge.lty=edge.lty13,
-     vertex.color="white"
+     #vertex.color="black",
+     vertex.size=4,
+     edge.width=.02
 	)
-          title("Glasso",line=-2) 
+          #title("Glasso") 
 
 dev.off()
 
