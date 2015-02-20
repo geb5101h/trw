@@ -11,6 +11,15 @@ legendre_Pl_array<-function(m,y){
   return(t(lv)*sqrt(2))
 }
 
+legendre_Pl_array<-function(m,y){
+  pf<-polynomial.functions(legendre.polynomials(m,normalized=T))
+  lv<-sapply(X=1:(m+1),FUN=function(x){
+    pf[[x]](y) #*sqrt(2*(x-1)+1)
+  })
+  return(t(lv)*sqrt(2))
+}
+
+
 edge.means<-function(dat,edgelist,m,cores){
   n<-dim(dat)[1]
   nedge<- dim(edgelist)[1]
