@@ -739,3 +739,55 @@ List rwrapper(
   return list;
 }
 
+// [[Rcpp::export]]
+List rwrapper2(
+  const NumericVector& edge_coef,
+  const arma::mat& vert_coef,
+  const NumericVector& edge_mean,
+  const arma::mat& vert_mean,
+  const arma::mat& edgelist,
+  const arma::vec& weights,
+  const arma::mat& legen_vec,
+  const NumericVector& legen_array,
+  double lambda,
+  double alpha_start,
+  int alg=0
+  )
+{
+  IntegerVector ldims = legen_array.attr("dim");
+  arma::cube la(legen_array.begin(),ldims[0],ldims[1],ldims[2],false);
+  IntegerVector ecdims = edge_coef.attr("dim");
+  arma::cube ec(edge_coef.begin(),ecdims[0],ecdims[1],ecdims[2],false);
+   IntegerVector emdims = edge_mean.attr("dim");
+  arma::cube em(edge_mean.begin(),emdims[0],emdims[1],emdims[2],false);
+
+  int dc_flag=0;
+  //int res = 128;  
+  int d = vert_coef.n_rows;
+  Mean mean(vert_mean, em);
+  Coef coef(d, ec.n_slices, ec.n_rows, vert_coef.n_cols);
+  
+   coef.edge_coef = ec;
+   coef.vert_coef = vert_coef;
+   Density density(vert_coef.n_rows, edgelist.n_rows, legen_vec.n_cols);
+   density.beliefprop(coef, weights,edgelist,legen_vec,la,dc_flag);
+   Nll_obj nll=neg_ll(
+    coef,
+    mean,  
+    weights,
+    edgelist,
+    legen_vec,
+    la,
+    dc_flag);
+  List list;
+  list["beliefs"]= density.beliefs;
+  list["edge_den"]= density.edge_den;
+  list["vert_coef"]= coef.vert_coef;
+  list["edge_coef"]= coef.edge_coef;
+  list["mutual_info"]=density.mutual_info;
+  list["mes"] = density.messages;
+  list["part_fn"]=nll.part_ret;
+  return list;
+}
+
+
